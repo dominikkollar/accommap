@@ -1,0 +1,10 @@
+playwright==1.49.1
+beautifulsoup4==4.12.3
+httpx==0.28.1
+psycopg2-binary==2.9.10
+sqlalchemy==2.0.36
+geoalchemy2==0.15.2
+pydantic==2.10.3
+python-dotenv==1.0.1
+tenacity==9.0.0
+geopy==2.4.1
