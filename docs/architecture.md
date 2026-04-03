@@ -3,21 +3,25 @@
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Docker Compose                       │
-│                                                          │
-│  ┌──────────┐    ┌──────────────┐    ┌───────────────┐  │
-│  │ Scraper  │───▶│  PostgreSQL  │◀───│   FastAPI     │  │
-│  │(Playwright│    │  + PostGIS  │    │   Backend     │  │
-│  │ + httpx) │    └──────────────┘    └───────┬───────┘  │
-│  └──────────┘                                │          │
-│                                              │ REST/JSON │
-│  ┌─────────────────────────────────────────┐ │          │
-│  │           Frontend (Nginx)              │◀┘          │
-│  │  Leaflet.js + OpenStreetMap tiles       │            │
-│  │  Price heatmap, clustering, filters     │            │
-│  └─────────────────────────────────────────┘            │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  Deployment target: local Docker host  OR  Proxmox VM (Ubuntu 24.04) │
+│                                                                       │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │                       Docker Compose                           │  │
+│  │                                                                │  │
+│  │  ┌──────────┐    ┌──────────────┐    ┌───────────────┐        │  │
+│  │  │ Scraper  │───▶│  PostgreSQL  │◀───│   FastAPI     │        │  │
+│  │  │(Playwright│    │  + PostGIS  │    │   Backend     │        │  │
+│  │  │ + httpx) │    └──────────────┘    └───────┬───────┘        │  │
+│  │  └──────────┘                                │                │  │
+│  │                                              │ REST/JSON       │  │
+│  │  ┌──────────────────────────────────────┐    │                │  │
+│  │  │         Frontend (Nginx)             │◀───┘                │  │
+│  │  │  Leaflet.js + OpenStreetMap tiles    │                     │  │
+│  │  │  Price heatmap, clustering, filters  │                     │  │
+│  │  └──────────────────────────────────────┘                     │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Details
@@ -109,3 +113,15 @@ CREATE TABLE services (
 | Backend | FastAPI | Async, auto-docs, Pydantic validation |
 | Spatial DB | PostGIS | Industry standard, bounding-box queries |
 | Scraping | Playwright | Handles JS-rendered Booking.com pages |
+| VM provisioning | Terraform (bpg/proxmox) | Declarative Proxmox VM lifecycle |
+| VM bootstrap | cloud-init | Installs Docker, clones repo, writes .env, registers systemd service |
+| VM OS | Ubuntu 24.04 LTS | LTS, cloud-image ready, official Docker support |
+
+## Infrastructure Targets
+
+| Target | Runtime | Guide |
+|---|---|---|
+| Local development | Docker Compose (bare host) | [docs/deployment.md](deployment.md) |
+| Production (Proxmox cluster) | Ubuntu 24.04 VM + Docker Compose | [infra/proxmox/README.md](../infra/proxmox/README.md) |
+
+The same `docker-compose.yml` runs in both targets — the only difference is how the host is provisioned.

@@ -11,6 +11,7 @@ Interactive price map of accommodation in the South Moravia (Jihomoravský kraj)
 - **Multi-source data** — Booking.com (Playwright scraper), Google Places API, Trivago
 - **PostGIS spatial DB** — bounding-box and radius queries
 - **Full Docker stack** — `docker compose up` and you're done
+- **Proxmox VM ready** — Terraform + cloud-init provisions a production Ubuntu 24.04 VM in minutes
 
 ## Quick Start
 
@@ -34,6 +35,13 @@ Scrapers (Python/Playwright) → PostgreSQL + PostGIS → FastAPI → Leaflet.js
 
 See [docs/architecture.md](docs/architecture.md) for full detail.
 
+## Deployment
+
+| Target | Guide |
+|---|---|
+| Local (Docker Compose) | [docs/deployment.md](docs/deployment.md) |
+| Proxmox VM (Terraform + cloud-init) | [infra/proxmox/README.md](infra/proxmox/README.md) |
+
 ## Data Sources
 
 | Source | Method | Notes |
@@ -53,6 +61,7 @@ Hotels · Pensions · Apartments · Hostels · Agro-tourism · Wellness Resorts 
 - [Testing](docs/testing.md)
 - [Operations](docs/operations.md)
 - [Deployment](docs/deployment.md)
+- [Proxmox Infrastructure](infra/proxmox/README.md)
 
 ## License
 

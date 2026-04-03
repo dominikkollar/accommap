@@ -79,3 +79,64 @@ Re-run the scraper to refresh prices (price history is preserved, new rows added
 ```bash
 docker compose run --rm scraper
 ```
+
+---
+
+## Proxmox VM Operations
+
+All commands assume you are SSH-ed into the VM (`ssh ubuntu@<vm-ip>`).
+
+### Service control
+
+```bash
+# Status of the Docker Compose stack (via systemd)
+sudo systemctl status accommap
+
+# Restart stack (e.g. after config change)
+sudo systemctl restart accommap
+
+# Full compose status
+docker compose -f /opt/accommap/docker-compose.yml ps
+```
+
+### Application update
+
+```bash
+cd /opt/accommap
+git pull
+sudo systemctl restart accommap
+# OR for a full image rebuild:
+docker compose up -d --build
+```
+
+### Scraper — manual run on VM
+
+```bash
+cd /opt/accommap
+docker compose run --rm scraper
+# Cron runs automatically every Monday at 02:00;
+# logs in /var/log/accommap-scraper.log
+```
+
+### Backup (from VM)
+
+```bash
+docker exec accommap_db pg_dump -U accommap accommap \
+  | gzip > ~/accommap-$(date +%F).sql.gz
+```
+
+### Firewall status
+
+```bash
+sudo ufw status verbose
+# Open ports: 22 (SSH), 3000 (frontend), 8000 (API)
+```
+
+### VM reprovisioning (Terraform)
+
+```bash
+# Destroy and recreate the VM
+cd infra/proxmox/terraform
+terraform destroy   # confirms before acting
+terraform apply
+```
