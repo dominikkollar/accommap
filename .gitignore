@@ -31,3 +31,10 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Terraform — never commit real credentials
+infra/proxmox/terraform/terraform.tfvars
+infra/proxmox/terraform/.terraform/
+infra/proxmox/terraform/.terraform.lock.hcl
+infra/proxmox/terraform/terraform.tfstate
+infra/proxmox/terraform/terraform.tfstate.backup

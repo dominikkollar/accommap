@@ -1,0 +1,136 @@
+#cloud-config
+# AccomMap — Ubuntu 24.04 LTS bootstrap
+# Rendered by Terraform; do not edit directly.
+
+hostname: accommap
+manage_etc_hosts: true
+
+users:
+  - name: ${ci_user}
+    groups: [sudo, docker]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+  - name: accommap
+    comment: "AccomMap service account"
+    system: true
+    shell: /bin/false
+    no_create_home: false
+    home: /opt/accommap
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - qemu-guest-agent
+  - git
+  - curl
+  - ca-certificates
+  - gnupg
+  - ufw
+  - logrotate
+
+runcmd:
+  # ----------------------------------------------------------------
+  # 1. Docker Engine (official repo)
+  # ----------------------------------------------------------------
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - |
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+    https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    > /etc/apt/sources.list.d/docker.list
+  - apt-get update -qq
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+  # ----------------------------------------------------------------
+  # 2. Enable & start services
+  # ----------------------------------------------------------------
+  - systemctl enable --now qemu-guest-agent
+  - systemctl enable --now docker
+
+  # ----------------------------------------------------------------
+  # 3. Firewall — allow SSH + app ports; deny everything else inbound
+  # ----------------------------------------------------------------
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp   comment 'SSH'
+  - ufw allow 3000/tcp comment 'AccomMap frontend'
+  - ufw allow 8000/tcp comment 'AccomMap API'
+  - ufw --force enable
+
+  # ----------------------------------------------------------------
+  # 4. Clone repository
+  # ----------------------------------------------------------------
+  - git clone ${app_repo_url} /opt/accommap
+  - chown -R accommap:accommap /opt/accommap
+
+  # ----------------------------------------------------------------
+  # 5. Write .env
+  # ----------------------------------------------------------------
+  - |
+    cat > /opt/accommap/.env <<'ENVEOF'
+    POSTGRES_DB=accommap
+    POSTGRES_USER=accommap
+    POSTGRES_PASSWORD=${postgres_password}
+    GOOGLE_PLACES_API_KEY=${google_places_api_key}
+    BOOKING_SEARCH_URL=https://www.booking.com/searchresults.cs.html
+    SOUTH_MORAVIA_LAT=49.2000
+    SOUTH_MORAVIA_LNG=16.6078
+    SEARCH_RADIUS_KM=100
+    ENVEOF
+  - chmod 600 /opt/accommap/.env
+  - chown accommap:accommap /opt/accommap/.env
+
+  # ----------------------------------------------------------------
+  # 6. Systemd service — docker compose up on boot
+  # ----------------------------------------------------------------
+  - |
+    cat > /etc/systemd/system/accommap.service <<'SVCEOF'
+    [Unit]
+    Description=AccomMap Docker Compose stack
+    Requires=docker.service
+    After=docker.service network-online.target
+    Wants=network-online.target
+
+    [Service]
+    Type=oneshot
+    RemainAfterExit=yes
+    WorkingDirectory=/opt/accommap
+    ExecStart=/usr/bin/docker compose up -d db backend frontend
+    ExecStop=/usr/bin/docker compose down
+    User=root
+    Restart=on-failure
+
+    [Install]
+    WantedBy=multi-user.target
+    SVCEOF
+  - systemctl daemon-reload
+  - systemctl enable --now accommap.service
+
+  # ----------------------------------------------------------------
+  # 7. Weekly scraper via cron (Monday 02:00)
+  # ----------------------------------------------------------------
+  - |
+    echo "0 2 * * 1 root cd /opt/accommap && /usr/bin/docker compose run --rm scraper >> /var/log/accommap-scraper.log 2>&1" \
+    > /etc/cron.d/accommap-scraper
+
+  # ----------------------------------------------------------------
+  # 8. Logrotate for scraper log
+  # ----------------------------------------------------------------
+  - |
+    cat > /etc/logrotate.d/accommap <<'LREOF'
+    /var/log/accommap-scraper.log {
+        weekly
+        rotate 8
+        compress
+        missingok
+        notifempty
+    }
+    LREOF
+
+final_message: "AccomMap bootstrap complete after $UPTIME seconds."

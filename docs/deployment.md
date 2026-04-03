@@ -61,3 +61,33 @@ git pull
 docker compose build
 docker compose up -d
 ```
+
+---
+
+## Proxmox VM Deployment
+
+Full Terraform + cloud-init setup lives in `infra/proxmox/`.  
+See **[infra/proxmox/README.md](../infra/proxmox/README.md)** for the full guide.
+
+### Quick summary
+
+| Step | Command / location |
+|---|---|
+| 1. Import Ubuntu 24.04 template (once) | `bash infra/proxmox/scripts/create-template.sh` |
+| 2. Create API token (once) | `bash infra/proxmox/scripts/create-api-token.sh` |
+| 3. Configure variables | copy `terraform.tfvars.example` → `terraform.tfvars` |
+| 4. Provision VM | `cd infra/proxmox/terraform && terraform apply` |
+| 5. Monitor bootstrap | `ssh ubuntu@<ip> tail -f /var/log/cloud-init-output.log` |
+
+### VM spec
+
+| | |
+|---|---|
+| OS | Ubuntu 24.04 LTS |
+| vCPU | 2 (configurable) |
+| RAM | 4 GB |
+| Disk | 50 GB |
+| Runtime | Docker Compose (same `docker-compose.yml`) |
+
+The VM runs the identical Docker Compose stack as local development.  
+`accommap.service` (systemd) starts the stack automatically on boot.
